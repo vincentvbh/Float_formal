@@ -1,0 +1,6 @@
+[submodule "code/jasmin/libopencm3"]
+	path = code/jasmin/libopencm3
+	url = https://github.com/libopencm3/libopencm3.git
+[submodule "code/armv7e-m/libopencm3"]
+	path = code/armv7e-m/libopencm3
+	url = https://github.com/libopencm3/libopencm3.git

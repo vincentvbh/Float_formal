@@ -1,0 +1,808 @@
+
+require "__f_const.jinc"
+require "__multilimb_lib.jinc"
+
+// Assumption means that we assume such conditions and no addtitional tests
+// are performed for validating the inputs assumptions.
+
+// Conventions:
+// (i) for 32-bit values lo and hi, [lo, hi] = lo + hi * 2^32
+// (ii) f64(lo, hi) is the double-precision floating-point value with memory the same as [lo, hi]
+
+// TODO: add more comments?
+
+// ======== constant-time conditional executions begin ========
+// For all functions here, we assume flag = 0 or -1
+// flag = 0 means nothing is changed;
+// flag = -1 means the conditional execution is taken
+
+// conditionally set the register value a as b
+inline
+fn __cset_32(reg u32 a b flag) -> reg u32 {
+    b ^= a;
+    b &= flag;
+    a ^= b;
+    return a;
+}
+
+// conditionally swap the register values a and b
+inline
+fn __cswap_32(reg u32 a b flag) -> reg u32, reg u32 {
+    reg u32 t;
+    t = a ^ b;
+    t &= flag;
+    a ^= t;
+    b ^= t;
+    return a, b;
+}
+
+// conditionally zeroize the register value a
+inline
+fn __czero_32(reg u32 a flag) -> reg u32 {
+    reg u32 t;
+    t = a & flag;
+    a ^= t;
+    return a;
+}
+// ======== constant-time conditional executions end ========
+
+// Use this function only for floating-point addition
+/*
+* Make sure that the first operand (x) has the larger absolute
+* value. This guarantees that the exponent of y is less than
+* or equal to the exponent of x, and, if they are equal, then
+* the mantissa of y will not be greater than the mantissa of x.
+*
+* After this swap, the result will have the sign x, except in
+* the following edge case: abs(x) = abs(y), and x and y have
+* opposite sign bits; in that case, the result shall be +0
+* even if the sign bit of x is 1. To handle this case properly,
+* we do the swap is abs(x) = abs(y) AND the sign of x is 1.
+*/
+fn __cswap_const32(reg u32 xlo xhi ylo yhi) -> reg u32, reg u32, reg u32, reg u32 {
+
+    reg u32 t0 t1 diff;
+    reg u32 swap swaplo;
+    reg u32 xuhi yuhi;
+    reg u32 nylo nyhi;
+    reg u32 difflo diffhi;
+
+    reg bool cflag;
+
+    // extract the 31-bit values for the high part
+    xuhi = #UBFX(xhi, 0, 31);
+    yuhi = #UBFX(yhi, 0, 31);
+
+    // [nylo, nyhi] = - [ylo, yuhi]
+    nylo = !ylo;
+    nyhi = !yuhi;
+    nylo, nyhi = __addi_64x32(nylo, nyhi, 1);
+    // difflo, diffhi = (xlo, xuhi) - (ylo, yuhi)
+    _, _, cflag, _, difflo = #ADDS(xlo, nylo);
+    diffhi = #ADC(xuhi, nyhi, cflag);
+
+    // swap = 1 if [xlo, xuhi] < [ylo, yuhi]
+    //      = 0 otherwise
+    swap = diffhi >> 31;
+
+    t0 = #RSB(difflo, 0);
+    t0 |= difflo;
+    t0 >>= 31;
+    // t0 & 1 = 1 if difflo = 0
+    //        = 0 otherwise
+    t0 = !t0;
+    t1 = #RSB(diffhi, 0);
+    t1 |= diffhi;
+    t1 >>= 31;
+    // t1 & 1 = 1 if diffhi = 0
+    //        = 0 otherwise
+    t1 = !t1;
+
+    // t0 & 1 = 1 if difflo = 0 and diffhi = 0
+    //        = 0 otherwise
+    t0 &= t1;
+    // t0 = 1 if ([difflo, diffhi] = 0 and f64(ylo, yhi) is negative)
+    //    = 0 otherwise
+    t0 &= xhi >> 31;
+
+    // swap = 1 if ([xlo, xuhi] < [ylo, yuhi] or
+    //             ([difflo, diffhi] = 0 and f64(ylo, yhi) is negative ) )
+    //      = 0 otherwise
+    swap |= t0;
+
+    // swap = -1 if ([xlo, xuhi] < [ylo, yuhi] or
+    //             ([difflo, diffhi] = 0 and f64(ylo, yhi) is negative ) )
+    //      = 0 otherwise
+    swap = #RSB(swap, 0);
+
+    // conditionally swap f64(xlo, xhi) and f64(ylo, yhi)
+    xlo, ylo = __cswap_32(xlo, ylo, swap);
+    xhi, yhi = __cswap_32(xhi, yhi, swap);
+
+    return xlo, xhi, ylo, yhi;
+
+}
+
+/*
+* Extract sign bits, exponents and mantissas. The mantissas are
+* scaled up to 2^55..2^56-1, and the exponent is unbiased. If
+* an operand is zero, its mantissa is set to 0 at this step, and
+* its exponent will be -1078.
+*/
+// Notice that subnormal numbers are zeroized at this step.
+// But we don't need this so the following code can be more optimized.
+// We do not optimize further here since we apply the optimization to
+// our optimized assembly program.
+// The equivalence proof in CryptoLine already assumes that only normal floating-point
+// numbers will occur
+fn __split_const32(reg u32 xlo xhi ylo yhi) -> reg u32, reg u32, reg u32, reg u32, reg u32, reg u32, reg u32, reg u32 {
+
+    reg u32 sx ex sy ey;
+    reg u32 t;
+
+    // extract the sign and exponent fields of f64(xlo, xhi)
+    sx = xhi >> 31;
+    ex = #UBFX(xhi, 20, 11);
+    xhi = #UBFX(xhi, 0, 20);
+
+    // test if the exponent is zero
+    t = #RSB(ex, 0);
+    t |= ex;
+    t >>= 31;
+    t = #RSB(t, 0);
+    // zeroize [xlo, xhi] if ex = 0
+    xlo &= t;
+    xhi &= t;
+    t = #RSB(t, 0);
+    // add 2^53 to [xlo, xhi] if ex != 0
+    xhi |= t << 20;
+    xhi <<= 3;
+    xhi |= xlo >> 29;
+    xlo <<= 3;
+    // compute the unbiased exponent
+    ex -= 1078;
+
+    sy = yhi >> 31;
+    ey = #UBFX(yhi, 20, 11);
+    yhi = #UBFX(yhi, 0, 20);
+
+    // test if the exponent is zero
+    t = #RSB(ey, 0);
+    t |= ey;
+    t >>= 31;
+    t = #RSB(t, 0);
+    // zeroize [ylo, yhi] if ey = 0
+    ylo &= t;
+    yhi &= t;
+    t = #RSB(t, 0);
+    // add 2^53 to [ylo, yhi] if ey != 0
+    yhi |= t << 20;
+    yhi <<= 3;
+    yhi |= ylo >> 29;
+    ylo <<= 3;
+    // compute the unbiased exponent
+    ey -= 1078;
+
+    return sx, ex, xlo, xhi, sy, ey, ylo, yhi;
+
+}
+
+// conditionally shift [ylo, yhi] until ex = ey
+// if this is not possible (since ex is much larger than ey), then [0, 0] is returned
+// Assumption:
+// (i) ex >= ey
+// (ii) [ylo, yhi] is the mantissa
+fn __cshift_const32(reg u32 ex ey ylo yhi) -> reg u32, reg u32 {
+
+    reg u32 cc t tlo thi;
+    reg u32 sticky mask;
+    reg u32 zero;
+
+    zero = 0;
+
+    cc = ex - ey;
+
+    mask = #RSB(cc, 59);
+    mask >>= 31;
+    // mask = 0 if [cc > 59]
+    //      = -1 otherwise
+    mask -= 1;
+    ylo &= mask;
+    yhi &= mask;
+    cc &= 63;
+
+    // constant-time right-shifting [ylo, yhi] while computing sticky bits
+    // mask = -1 if cc >= 32
+    //      = 0 otherwise
+    mask = #SBFX(cc, 5, 1);
+    sticky = __cset_32(zero, ylo, mask);
+    ylo = __cset_32(ylo, yhi, mask);
+    yhi = __czero_32(yhi, mask);
+    cc &= 31;
+    t = #RSB(cc, 32);
+    mask = ylo << t;
+    sticky |= mask;
+    ylo >>= cc;
+    t = yhi << t;
+    ylo |= t;
+    yhi >>= cc;
+    t = #RSB(sticky, 0);
+    t |= sticky;
+    // t >> 31 = 1 if sticky != 0
+    //         = 0 otherwise
+    ylo |= t >> 31;
+
+    return ylo, yhi;
+
+}
+
+// Compute [xlo, xhi] + [ylo, yhi] if sx = sy
+//         [xlo, xhi] - [ylo, yhi] otherwise
+// Assumption:
+// (i) [xlo, xhi] and [ylo, yhi] are mantissas
+// (ii) sx and sy are the sign bits
+fn __caddsub_const32(reg u32 xlo xhi ylo yhi sx sy) -> reg u32, reg u32 {
+
+    reg u32 tlo, thi;
+    reg u32 t;
+
+    tlo = ylo; thi = yhi;
+    // [tlo, thi] = - [ylo, yhi]
+    tlo, thi = __neg_32x2(tlo, thi);
+    t = sx ^ sy;
+    t = #RSB(t, 0);
+    // [ylo, yhi] = - [ylo, yhi] if sx != sy
+    //            = [ylo, yhi] otherwise
+    ylo = __cset_32(ylo, tlo, t);
+    yhi = __cset_32(yhi, thi, t);
+    // compute the desired addition/subtraction
+    xlo, xhi = __add_64x32(xlo, xhi, ylo);
+    xhi += yhi;
+
+    return xlo, xhi;
+
+}
+
+// If the upper i bits of hi are all zeros, shift left by i bits,
+// otherwise, add i to e
+inline
+fn __normalize_32(reg u32 e lo hi, inline int i) -> reg u32, reg u32, reg u32 {
+
+    reg u32 zero t adde;
+    reg u32 tlo thi;
+
+    zero = hi >> (32 - i);
+    t = #RSB(zero, 0);
+    zero |= t;
+    // zero = 0 if the upper i bits of hi are all zeros
+    //      = 1 otherwise
+    zero >>= 31;
+    adde = i;
+    adde *= zero;
+    e += adde;
+    tlo = lo; thi = hi;
+    tlo, thi = __ulshi_32x2(tlo, thi, i);
+    // zero = -1 if the upper i bits of hi are all zeros
+    //      = 0 otherwise
+    zero -= 1;
+    lo = __cset_32(lo, tlo, zero);
+    hi = __cset_32(hi, thi, zero);
+
+    return e, lo, hi;
+
+}
+
+// If [xlo, xhi] != 0, shift left until the 31st bit of xhi is 1
+fn __normalize_64_const32(reg u32 ex xlo xhi) -> reg u32, reg u32, reg u32 {
+
+    reg u32 zero t;
+    reg u32 adde;
+
+    ex -= 63;
+
+    // conditionally shift 32 bits
+    // decide if we want to apply them
+    zero = xhi;
+    t = #RSB(xhi, 0);
+    zero |= t;
+    // zero = 0 if hi = 0
+    //      = 1 otherwise
+    zero >>= 31;
+    adde = 32;
+    adde *= zero;
+    // add 32 if xhi != 0
+    ex += adde;
+    zero -= 1;
+    // [xlo, xhi] = [xhi, 0] if xhi = 0
+    //            = [xlo, xhi] otherwise
+    xhi = __cset_32(xhi, xlo, zero);
+    xlo = __czero_32(xlo, zero);
+
+    // test if we can shift left by 16 bits
+    ex, xlo, xhi = __normalize_32(ex, xlo, xhi, 16);
+    // test if we can shift left by 8 bits
+    ex, xlo, xhi = __normalize_32(ex, xlo, xhi, 8);
+    // test if we can shift left by 4 bits
+    ex, xlo, xhi = __normalize_32(ex, xlo, xhi, 4);
+    // test if we can shift left by 2 bits
+    ex, xlo, xhi = __normalize_32(ex, xlo, xhi, 2);
+    // test if we can shift left by 1 bits
+    ex, xlo, xhi = __normalize_32(ex, xlo, xhi, 1);
+
+    return ex, xlo, xhi;
+
+}
+
+// right shift by 9 bits
+fn __scale_const32(reg u32 xlo xhi ex) -> reg u32, reg u32, reg u32 {
+
+    reg u32 sticky;
+    reg u32 c;
+
+    c = 0x1ff;
+
+    sticky = xlo & c;
+    sticky += c;
+    // if sticky != 0, we or the 9th bit by 1
+    xlo |= sticky;
+    xlo = __urshi_lo32(xlo, xhi, 9);
+    xhi >>= 9;
+    ex += 9;
+
+    return xlo, xhi, ex;
+
+}
+
+// construct a double-precision floating-point value from
+// sign s, exponent e, and mantissa [lo, hi]
+fn __fpr_const32(reg u32 s e lo hi) -> reg u32, reg u32 {
+
+    reg u32 t mask;
+    reg u32 zero sat;
+
+    t = #RSB(lo, 0);
+    t |= lo;
+    t = !t;
+    mask = #RSB(hi, 0);
+    mask |= hi;
+    mask = !mask;
+    mask &= t;
+    // zero = 1 if lo = 0 and hi = 0
+    //      = 0 otherwise
+    zero = mask >> 31;
+    // zero = -1 if lo = 0 and hi = 0
+    //      = 0 otherwise
+    zero = #RSB(zero, 0);
+
+    e += 1076;
+
+    e = __czero_32(e, zero);
+
+    // compute the round bit following rounding to the nearest even mantissa
+    // we add 1 if the lowest 3 bits of lo is one of 0b011, 0b110, 0b111.
+    // mask = 1 if (lo & 7) = 3 or 6 or 7
+    //      = 0 otherwise
+    mask = lo | (lo >> 2);
+    mask &= lo >> 1;
+    mask &= 1;
+
+    // shift right by 2 bits with rounding to the nearest even mantissa
+    lo = __urshi_lo32(lo, hi, 2);
+    hi >>= 2;
+    lo, hi = __add_64x32(lo, hi, mask);
+
+    // zeroization
+    e += hi >> 20;
+    zero = #RSB(e, 0);
+    zero = #ASR(zero, 31);
+    zero = !zero;
+    // zero = -1 if e <= 0
+    //      = 0 otherwise
+    lo = __czero_32(lo, zero);
+    hi = __czero_32(hi, zero);
+    e = __czero_32(e, zero);
+
+    // saturation
+    sat = #RSB(e, 2048);
+    // sat = 2046 - e
+    sat -= 2;
+    // [lo, hi] = [0xffffffff, 0xffffffff] if 2046 < e
+    //          = unchanged otherwise
+    lo |= sat >>s 31;
+    hi |= sat >>s 31;
+    e |= sat >>s 31;
+    // e = 0xfffffffe if 2046 < e
+    //   = unchanged otherwise
+    e -= sat >> 31;
+
+    // we only need the lower 20 bits of hi
+    hi = #UBFX(hi, 0, 20);
+    // we only need the lower 11 bits of e
+    // we first extract the lower 12 bits of e
+    hi |= e << 20;
+    hi <<= 1;
+    // clear the 11th bit of e
+    hi >>= 1;
+    // put back the sign bit
+    hi |= s << 31;
+
+    return lo, hi;
+
+}
+
+fn __split25_const(reg u32 xlo xhi ylo yhi) -> reg u32, reg u32, reg u32, reg u32, reg u32, reg u32, reg u32, reg u32 {
+
+    reg u32 sx ex sy ey;
+    reg u32 t;
+
+    // extract sign and exponent fields
+    sx = xhi >> 31;
+    ex = #UBFX(xhi, 20, 11);
+    // split the 52-bit mantissa into
+    // upper 27-bit and lower 25-bit
+    xhi <<= 7;
+    xhi |= xlo >> 25;
+    xlo = #UBFX(xlo, 0, 25);
+    xhi = #UBFX(xhi, 0, 27);
+    t = #RSB(ex, 0);
+    t >>= 31;
+    // add 2^27 to xhi if ex != 0
+    xhi |= t << 27;
+
+    // extract sign and exponent fields
+    sy = yhi >> 31;
+    ey = #UBFX(yhi, 20, 11);
+    // split the 52-bit mantissa into
+    // upper 27-bit and lower 25-bit
+    yhi <<= 7;
+    yhi |= ylo >> 25;
+    ylo = #UBFX(ylo, 0, 25);
+    yhi = #UBFX(yhi, 0, 27);
+    t = #RSB(ey, 0);
+    t >>= 31;
+    // add 2^27 to yhi if ey != 0
+    yhi |= t << 27;
+
+    return sx, ex, xlo, xhi, sy, ey, ylo, yhi;
+
+}
+
+// multi-limb multiplication of mantissas
+fn __mul25_const(reg u32 xlo xhi ylo yhi) -> reg u32, reg u32, reg u32, reg u32 {
+
+    reg u32 prodlo prodhi;
+    reg u32 stickylo stickyhi;
+    reg u32 reslo reshi;
+    reg u32 t;
+
+    // compute radix-2^25 result of xlo * ylo
+    stickyhi, stickylo = xlo * ylo;
+    stickyhi <<= 7;
+    stickyhi |= stickylo >> 25;
+    // stickylo + stickyhi * 2^25 = xlo * ylo
+    stickylo = #UBFX(stickylo, 0, 25);
+
+    // compute radix-2^25 result of xlo * yhi
+    reshi, reslo = xlo * yhi;
+    reshi <<= 7;
+    reshi |= reslo >> 25;
+    // t + reshi * 2^25 = xlo * yhi
+    t = #UBFX(reslo, 0, 25);
+    // stickylo + stickyhi * 2^25 + reshi * 2^50 =
+    // xlo * ylo + xlo * yhi * 2^25
+    stickyhi += t;
+
+    // compute radix-2^25 result of xhi * ylo
+    prodhi, prodlo = xhi * ylo;
+    prodhi <<= 7;
+    prodhi |= prodlo >> 25;
+    // t + prodhi * 2^25 = xhi * ylo
+    t = #UBFX(prodlo, 0, 25);
+    stickyhi += t;
+    prodlo = prodhi + reshi;
+
+    prodlo += stickyhi >> 25;
+    // stickylo + stickyhi * 2^25 + prodlo * 2^50 =
+    // xlo * ylo + (xlo * yhi + xhi * ylo) * 2^25
+    stickyhi = #UBFX(stickyhi, 0, 25);
+
+    prodhi = 0;
+    // stickylo + stickyhi * 2^25 + prodlo * 2^50 + prodhi * 2^75 =
+    // xlo * ylo + (xlo * yhi + xhi * ylo) * 2^25 + xhi * yhi * 2^50
+    prodlo, prodhi = #UMLAL(prodlo, prodhi, xhi, yhi);
+
+    return prodlo, prodhi, stickylo, stickyhi;
+
+}
+
+fn __normalize_53_sticky_const(reg u32 prode prodlo prodhi stickylo stickyhi) -> reg u32, reg u32, reg u32 {
+
+    reg u32 tsticky t0 t1;
+    reg bool cflag;
+
+    stickylo |= stickyhi;
+
+    t0 = 0xffffffff;
+    _, _, cflag, _, stickylo = #ADDS(stickylo, t0);
+    t0 = 0;
+    // t0 = 1 if stickylo != 0 or stickyhi != 0
+    //    = 0 otherwise
+    t0 = #ADC(t0, 0, cflag);
+    // or with the sticky bit
+    prodlo |= t0;
+
+    // t0 = 1 if prodhi >= 2**23
+    //    = 0 otherwise
+    t0 = #UBFX(prodhi, 23, 1);
+
+    // conditionally left-shift by one while orring with sticky bit properly
+    tsticky = prodlo & t0;
+    // left-shift prodlo
+    prodlo >>= t0;
+    prodlo |= tsticky;
+    t1 = t0 & prodhi;
+    prodlo |= t1 << 31;
+    // left-shift prodhi
+    prodhi >>= t0;
+    // increment prode by 1 if we shift
+    prode += t0;
+
+    return prode, prodlo, prodhi;
+
+}
+
+fn __fadd_32(reg u32 xlo xhi ylo yhi) -> reg u32, reg u32 {
+
+    reg u32 sx ex sy ey;
+
+    xlo, xhi, ylo, yhi = __cswap_const32(xlo, xhi, ylo, yhi);
+    sx, ex, xlo, xhi, sy, ey, ylo, yhi = __split_const32(xlo, xhi, ylo, yhi);
+    ylo, yhi = __cshift_const32(ex, ey, ylo, yhi);
+    ylo = ylo; yhi = yhi;
+    xlo, xhi = __caddsub_const32(xlo, xhi, ylo, yhi, sx, sy);
+    ex, xlo, xhi = __normalize_64_const32(ex, xlo, xhi);
+    xlo, xhi, ex = __scale_const32(xlo, xhi, ex);
+    xlo, xhi = __fpr_const32(sx, ex, xlo, xhi);
+
+    return xlo, xhi;
+
+}
+
+fn __fsub_32(reg u32 xlo xhi ylo yhi) -> reg u32, reg u32 {
+
+    reg u32 thi;
+
+    thi = #UBFX(yhi, 31, 1);
+    thi ^= 1;
+
+    yhi <<= 1;
+    yhi >>= 1;
+    yhi |= thi << 31;
+
+    xlo, xhi = __fadd_32(xlo, xhi, ylo, yhi);
+
+    return xlo, xhi;
+
+}
+
+fn __fmul_32(reg u32 xlo xhi ylo yhi) -> reg u32, reg u32 {
+
+    reg u32 sx ex sy ey;
+    reg u32 prodlo prodhi;
+    reg u32 stickylo stickyhi;
+    reg u32 prods prode rmlo rmhi;
+
+    sx, ex, xlo, xhi, sy, ey, ylo, yhi = __split25_const(xlo, xhi, ylo, yhi);
+
+    prods = sx ^ sy;
+    // 2 * (1023 + 52) - 50 = 2100
+    prode = ex + ey;
+    prode -= 2100;
+
+    prodlo, prodhi, stickylo, stickyhi = __mul25_const(xlo, xhi, ylo, yhi);
+    prode, prodlo, prodhi = __normalize_53_sticky_const(prode, prodlo, prodhi, stickylo, stickyhi);
+    prodlo, prodhi = __fpr_const32(prods, prode, prodlo, prodhi);
+
+    return prodlo, prodhi;
+
+}
+
+fn __fsqr_32(reg u32 xlo xhi) -> reg u32, reg u32 {
+
+
+    reg u32 ylo yhi;
+    reg u32 prodlo prodhi;
+
+    ylo = xlo;
+    yhi = xhi;
+
+    prodlo, prodhi = __fmul_32(xlo, xhi, ylo, yhi);
+
+    return prodlo, prodhi;
+
+}
+
+fn __fhalf_32(reg u32 xlo xhi) -> reg u32, reg u32 {
+
+    reg u32 sx ex;
+    reg u32 mask;
+
+    sx = #UBFX(xhi, 31, 1);
+    ex = #UBFX(xhi, 20, 11);
+    xhi = #UBFX(xhi, 0, 20);
+
+    ex -= 1;
+    // the 31st bit of mask is 1 iff ex > 0
+    mask = -ex;
+    xlo = #AND(xlo, mask >>s 31);
+    xhi = #AND(xhi, mask >>s 31);
+    ex = #AND(ex, mask >>s 31);
+
+    xhi |= ex << 20;
+    xhi |= sx << 31;
+
+    return xlo, xhi;
+
+}
+
+// Truncate f64(xlo, xhi) to int64_t
+// In other words, we round toward zero
+// Assumption:
+// (i) -2^63 <= f64(xlo, xhi) < 2^63
+fn __ftrunc_32(reg u32 xlo xhi) -> reg u32, reg u32 {
+
+    reg u32 sx ex xuhi;
+    reg u32 reslo reshi;
+    reg u32 cc;
+    reg u32 t;
+
+    sx = #UBFX(xhi, 31, 1);
+    ex = #UBFX(xhi, 20, 11);
+    xuhi = #UBFX(xhi, 0, 20);
+
+    reshi = 1;
+    reshi <<= 30;
+    reshi |= xuhi << 10;
+    reshi |= xlo >> 22;
+    reslo = xlo << 10;
+
+    t = 1085;
+
+    cc = t - ex;
+    t = cc & 63;
+
+    reslo, reshi = __ursh_32x2(reslo, reshi, t);
+
+    t = cc - 64;
+    t >>= 31;
+    t = -t;
+    reslo &= t;
+    reshi &= t;
+
+    t = -sx;
+    reslo ^= t;
+    reshi ^= t;
+
+    reslo, reshi = __add_64x32(reslo, reshi, sx);
+
+    return reslo, reshi;
+
+}
+
+// Compute the floor of f64(xlo, xhi)
+// Assumption:
+// (i) -2^63 <= f64(xlo, xhi) < 2^63
+fn __ffloor_32(reg u32 xlo xhi) -> reg u32, reg u32 {
+
+    reg u32 reslo reshi;
+    reg u32 t tt;
+
+    reslo, reshi = __ftrunc_32(xlo, xhi);
+
+    // change this into the subtractive one once we have #SBC
+    t = xhi >>s 31;
+    tt = t;
+
+    reslo, reshi = __add_64x64(reslo, reshi, t, tt);
+
+    return reslo, reshi;
+
+}
+
+// Convert an int64_t into f64(-, -)
+// fpr_scaled(-, 0) = fpr_of(-) = this function
+fn __ffromint64_32(reg u32 xlo xhi) -> reg u32, reg u32 {
+
+    reg u32 sx ex t;
+    reg u32 reslo reshi;
+
+    sx = #UBFX(xhi, 31, 1);
+    t = -sx;
+    reslo = xlo ^ t;
+    reshi = xhi ^ t;
+    reslo, reshi = __add_64x32(reslo, reshi, sx);
+
+    ex = 9;
+    ex, reslo, reshi = __normalize_64_const32(ex, reslo, reshi);
+
+    t = #UBFX(reslo, 0, 9);
+    t += 0x1ff;
+    reslo |= t;
+    reslo, reshi = __urshi_32x2(reslo, reshi, 9);
+    reslo, reshi = __fpr_const32(sx, ex, reslo, reshi);
+
+    return reslo, reshi;
+
+}
+
+fn __polyeval_horn(reg u32 lo hi) -> reg u32, reg u32 {
+
+    reg u32 clo chi;
+    reg u32 tlo thi;
+
+    inline int i;
+
+    tlo = exp_const64.[u32 0 * 8 + 0 * 4];
+    thi = exp_const64.[u32 0 * 8 + 1 * 4];
+
+    for i = 1 to 13 {
+
+        clo, chi = __fixedmul_64x64(lo, hi, tlo, thi);
+
+        tlo = exp_const64.[u32 i * 8 + 0 * 4];
+        thi = exp_const64.[u32 i * 8 + 1 * 4];
+
+        tlo, thi = __sub_64x64(tlo, thi, clo, chi);
+
+    }
+
+    return tlo, thi;
+
+}
+
+fn __fexpm_p63(reg u32 xlo xhi ccslo ccshi) -> reg u32, reg u32 {
+
+    reg u32 x63lo x63hi;
+    reg u32 ptwolo ptwohi;
+    reg u32 tlo thi;
+
+    stack u32 s_tlo s_thi;
+
+    s_tlo = ccslo; s_thi = ccshi;
+
+    ptwolo = 0; ptwohi = 0; ptwohi = #MOVT(ptwohi, 17376);
+
+    x63lo = xlo; x63hi = xhi;
+
+    x63lo, x63hi = __fmul_32(x63lo, x63hi, ptwolo, ptwohi);
+    x63lo, x63hi = __ftrunc_32(x63lo, x63hi);
+    x63lo, x63hi = __ulshi_32x2(x63lo, x63hi, 1);
+
+    x63lo, x63hi = __polyeval_horn(x63lo, x63hi);
+
+
+    ptwolo = 0; ptwohi = 0; ptwohi = #MOVT(ptwohi, 17376);
+
+    tlo = s_tlo; thi = s_thi;
+    s_tlo = x63lo; s_thi = x63hi;
+    tlo, thi = __fmul_32(tlo, thi, ptwolo, ptwohi);
+    tlo, thi = __ftrunc_32(tlo, thi);
+    tlo, thi = __ulshi_32x2(tlo, thi, 1);
+
+    x63lo = s_tlo; x63hi = s_thi;
+    x63lo, x63hi = __fixedmul_64x64(x63lo, x63hi, tlo, thi);
+
+    x63lo = x63lo; x63hi = x63hi;
+
+    return x63lo, x63hi;
+
+}
+
+
+
+
+
+
+
+
+

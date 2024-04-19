@@ -1,0 +1,150 @@
+
+require "__f_arm32.jinc"
+
+export
+fn __fadd_32_export(reg u32 sum_ptr x_ptr y_ptr) {
+
+    reg u32 xlo xhi ylo yhi;
+    reg u32 sumlo sumhi;
+
+    xlo, xhi = __load_32x2_external(x_ptr);
+    ylo, yhi = __load_32x2_external(y_ptr);
+    sumlo, sumhi = __fadd_32(xlo, xhi, ylo, yhi);
+    __store_32x2_external(sum_ptr, sumlo, sumhi);
+
+}
+
+export
+fn __fsub_32_export(reg u32 sum_ptr x_ptr y_ptr) {
+
+    reg u32 xlo xhi ylo yhi;
+    reg u32 sumlo sumhi;
+
+    xlo, xhi = __load_32x2_external(x_ptr);
+    ylo, yhi = __load_32x2_external(y_ptr);
+    sumlo, sumhi = __fsub_32(xlo, xhi, ylo, yhi);
+    __store_32x2_external(sum_ptr, sumlo, sumhi);
+
+}
+
+export
+fn __fmul_32_export(reg u32 prod_ptr x_ptr y_ptr) {
+
+    reg u32 xlo xhi ylo yhi;
+    reg u32 prodlo prodhi;
+
+    xlo, xhi = __load_32x2_external(x_ptr);
+    ylo, yhi = __load_32x2_external(y_ptr);
+    prodlo, prodhi = __fmul_32(xlo, xhi, ylo, yhi);
+    __store_32x2_external(prod_ptr, prodlo, prodhi);
+
+}
+
+export
+fn __fsqr_32_export(reg u32 prod_ptr x_ptr) {
+
+    reg u32 xlo xhi;
+    reg u32 prodlo prodhi;
+
+    xlo, xhi = __load_32x2_external(x_ptr);
+    prodlo, prodhi = __fsqr_32(xlo, xhi);
+    __store_32x2_external(prod_ptr, prodlo, prodhi);
+
+}
+
+export
+fn __fhalf_32_export(reg u32 prod_ptr x_ptr) {
+
+    reg u32 xlo xhi;
+    reg u32 prodlo prodhi;
+
+    xlo, xhi = __load_32x2_external(x_ptr);
+    prodlo, prodhi = __fhalf_32(xlo, xhi);
+    __store_32x2_external(prod_ptr, prodlo, prodhi);
+
+}
+
+export
+fn __ftrunc_32_export(reg u32 res_ptr x_ptr) {
+
+    reg u32 xlo xhi;
+    reg u32 reslo reshi;
+
+    xlo, xhi = __load_32x2_external(x_ptr);
+    reslo, reshi = __ftrunc_32(xlo, xhi);
+    __store_32x2_external(res_ptr, reslo, reshi);
+
+}
+
+export
+fn __ffloor_32_export(reg u32 res_ptr x_ptr) {
+
+    reg u32 xlo xhi;
+    reg u32 reslo reshi;
+
+    xlo, xhi = __load_32x2_external(x_ptr);
+    reslo, reshi = __ffloor_32(xlo, xhi);
+    __store_32x2_external(res_ptr, reslo, reshi);
+
+}
+
+export
+fn __ffromint64_32_export(reg u32 res_ptr x_ptr) {
+
+    reg u32 xlo xhi;
+    reg u32 reslo reshi;
+
+    xlo, xhi = __load_32x2_external(x_ptr);
+    reslo, reshi = __ffromint64_32(xlo, xhi);
+    __store_32x2_external(res_ptr, reslo, reshi);
+
+}
+
+export
+fn __fixedmul_64x64_export(reg u32 c_ptr a_ptr b_ptr){
+
+    reg u32 a0 a1;
+    reg u32 b0 b1;
+    reg u32 c0 c1;
+
+    a0, a1 = __load_32x2_external(a_ptr);
+    b0, b1 = __load_32x2_external(b_ptr);
+    c0, c1 = __fixedmul_64x64(a0, a1, b0, b1);
+    __store_32x2_external(c_ptr, c0, c1);
+
+}
+
+export
+fn __polyeval_horn_export(reg u32 des_ptr src_ptr){
+
+    reg u32 lo hi;
+
+    lo, hi = __load_32x2_external(src_ptr);
+    lo, hi = __polyeval_horn(lo, hi);
+    __store_32x2_external(des_ptr, lo, hi);
+
+}
+
+export
+fn __fexpm_p63_export(reg u32 des_ptr src_ptr ccs_ptr) {
+
+    reg u32 srclo srchi;
+    reg u32 ccslo ccshi;
+    reg u32 deslo deshi;
+
+    srclo, srchi = __load_32x2_external(src_ptr);
+    ccslo, ccshi = __load_32x2_external(ccs_ptr);
+    deslo, deshi = __fexpm_p63(srclo, srchi, ccslo, ccshi);
+    __store_32x2_external(des_ptr, deslo, deshi);
+
+}
+
+
+
+
+
+
+
+
+
+

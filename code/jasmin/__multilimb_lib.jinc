@@ -1,0 +1,216 @@
+
+// TODO: see if we need all logical operations
+
+
+
+// ======== multi-word memory operations begin ========
+
+inline
+fn __load_32x2_external(reg u32 x_ptr) -> reg u32, reg u32 {
+    reg u32 a0 a1;
+    a0 = (u32)[x_ptr + 4 * 0];
+    a1 = (u32)[x_ptr + 4 * 1];
+    return a0, a1;
+}
+
+inline
+fn __load_32x4_external(reg u32 x_ptr) -> reg u32, reg u32, reg u32, reg u32 {
+    reg u32 a0 a1 a2 a3;
+    a0 = (u32)[x_ptr + 4 * 0];
+    a1 = (u32)[x_ptr + 4 * 1];
+    a2 = (u32)[x_ptr + 4 * 2];
+    a3 = (u32)[x_ptr + 4 * 3];
+    return a0, a1, a2, a3;
+}
+
+inline
+fn __store_32x2_external(reg u32 x_ptr a0 a1) {
+    (u32)[x_ptr + 4 * 0] = a0;
+    (u32)[x_ptr + 4 * 1] = a1;
+}
+
+inline
+fn __store_32x4_external(reg u32 x_ptr a0 a1 a2 a3) {
+    (u32)[x_ptr + 4 * 0] = a0;
+    (u32)[x_ptr + 4 * 1] = a1;
+    (u32)[x_ptr + 4 * 2] = a2;
+    (u32)[x_ptr + 4 * 3] = a3;
+}
+
+// ======== multi-word memory operations end ========
+
+// ======== multi-limb shifts begin ========
+
+// logically shift [lo, hi] left by n bits
+// Assumption: 0 <= n < 64
+inline
+fn __ulshi_32x2(reg u32 lo hi, inline int n) -> reg u32, reg u32 {
+
+    if(n >= 32){
+        hi = lo;
+        lo = 0;
+        n -= 32;
+    }
+
+    hi = #LSL(hi, n);
+    hi |= (lo >> (32 - n));
+    lo = #LSL(lo, n);
+
+    return lo, hi;
+
+}
+
+// logically shift [lo, hi] right by n bits
+// Assumption: 0 <= n < 64
+inline
+fn __urshi_32x2(reg u32 lo hi, inline int n) -> reg u32, reg u32 {
+
+    if(n >= 32){
+        lo = hi;
+        hi = 0;
+        n -= 32;
+    }
+
+    lo = #LSR(lo, n);
+    lo |= (hi << (32 - n));
+    hi = #LSR(hi, n);
+
+    return lo, hi;
+
+}
+
+
+// logically shift [lo, hi] right by n bits
+// Assumption: 0 <= n < 64.
+// TODO: make this constant-time
+inline
+fn __ursh_32x2(reg u32 lo hi n) -> reg u32, reg u32 {
+
+    reg u32 tn;
+    reg u32 t;
+
+    if(n >= 32){
+        lo = hi;
+        hi = 0;
+        n -= 32;
+    }
+
+    tn = #RSB(n, 32);
+
+    lo = #LSR(lo, n);
+    t = #LSL(hi, tn);
+    lo |= t;
+    hi = #LSR(hi, n);
+
+    return lo, hi;
+
+}
+
+// logically shift [lo, hi] right by n bits and return
+// the lowest 32-bit value
+// Assumption: 0 <= n < 64.
+inline
+fn __urshi_lo32(reg u32 lo hi, inline int n) -> reg u32 {
+
+    if(n >= 32){
+        lo = hi;
+        hi = 0;
+        n -= 32;
+    }
+
+    lo = #LSR(lo, n);
+    lo |= (hi << (32 - n));
+
+    return lo;
+
+}
+
+// ======== multi-limb shifts end ========
+
+// ======== multi-limb addition/subtraction/negation begin ========
+// TODO: add __sub_64x32, __sub_64x64 once we have #SBC
+
+// add the 32-bit register value a to [lo, hi]
+// and return a 64-bit value
+inline
+fn __add_64x32(reg u32 lo hi a) -> reg u32, reg u32 {
+    reg bool cflag;
+    _, _, cflag, _, lo = #ADDS(lo, a);
+    hi = #ADC(hi, 0, cflag);
+    return lo, hi;
+}
+
+// add the 32-bit constant value i to [lo, hi]
+// and return a 64-bit value
+inline
+fn __addi_64x32(reg u32 lo hi, inline int i) -> reg u32, reg u32 {
+    reg bool cflag;
+    _, _, cflag, _, lo = #ADDS(lo, i);
+    hi = #ADC(hi, 0, cflag);
+    return lo, hi;
+}
+
+// add up [lo0, hi0] and [lo1, hi1]
+// and return a 64-bit value
+inline
+fn __add_64x64(reg u32 lo0 hi0 lo1 hi1) -> reg u32, reg u32 {
+    reg bool cflag;
+    _, _, cflag, _, lo0 = #ADDS(lo0, lo1);
+    hi0 = #ADC(hi0, hi1, cflag);
+    return lo0, hi0;
+}
+
+inline
+fn __add_96x64(reg u32 des0 des1 des2 lo hi) -> reg u32, reg u32, reg u32 {
+    reg bool cflag;
+    _, _, cflag, _, des0 = #ADDS(des0, lo);
+    _, _, cflag, _, des1 = #ADCS(des1, hi, cflag);
+    des2 = #ADC(des2, 0, cflag);
+    return des0, des1, des2;
+}
+
+// negate [lo, hi]
+inline
+fn __neg_32x2(reg u32 lo hi) -> reg u32, reg u32 {
+    lo = !lo; hi = !hi;
+    lo, hi = __addi_64x32(lo, hi, 1);
+    return lo, hi;
+}
+
+inline
+fn __sub_64x64(reg u32 lo0 hi0 lo1 hi1) -> reg u32, reg u32 {
+    reg u32 tlo thi;
+    tlo, thi = __neg_32x2(lo1, hi1);
+    lo0, hi0 = __add_64x64(lo0, hi0, tlo, thi);
+    return lo0, hi0;
+}
+
+// ======== multi-limb addition/subtraction/negation end ========
+
+// ======== multi-limb multiplication begin ========
+
+// compute  floor( [lo0, hi0] * [lo1, hi1] / 2^64 )
+inline
+fn __fixedmul_64x64(reg u32 lo0 hi0 lo1 hi1) -> reg u32, reg u32 {
+
+    reg u32 prod0 prod1 prod2 prod3;
+    reg u32 tlo thi;
+
+    prod1, prod0 = lo0 * lo1;
+    prod3, prod2 = hi0 * hi1;
+
+    thi, tlo = lo0 * hi1;
+    prod1, prod2, prod3 = __add_96x64(prod1, prod2, prod3, tlo, thi);
+
+    thi, tlo = lo1 * hi0;
+    prod1, prod2, prod3 = __add_96x64(prod1, prod2, prod3, tlo, thi);
+
+    return prod2, prod3;
+
+}
+
+
+// ======== multi-limb multiplication end ========
+
+
+

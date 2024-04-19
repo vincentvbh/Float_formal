@@ -1,0 +1,251 @@
+
+(* we assume that r1 || r0 is the same as s0 || e0 || m0
+   r0 and r1 are the actual input registers, but we specify the preconditions on s0, e0, and m0
+*)
+join t e0 m0;
+join src0 s0 t;
+spl r1 r0 src0 32;
+
+join t e1 m1;
+join src1 s1 t;
+spl r3 r2 src1 32;
+
+(* we assume that r3 || r2 is the same as s1 || e1 || m1
+   r2 and r3 are the actual input registers, but we specify the preconditions on s1, e1, and m1
+*)
+
+join t0 e0 m0;
+join t1 e1 m1;
+
+(* swap to ensure that the absolute values of r1 || r0 is greater or equal to r3 || r2
+   if the absolute values are the same, we swap if r1 || r0 is negative
+*)
+
+subb swap_bit t t0 t1;
+subs discard nt@uint63 0@uint63 t;
+or t@uint63 t nt;
+shrs t discard t 62;
+cast uint1 diffzero t;
+not ndiffzero@uint1 diffzero;
+and swap_same@uint1 ndiffzero s0;
+or swap_final@uint1 swap_bit swap_same;
+
+cmov t0 swap_final src1 src0;
+cmov t1 swap_final src0 src1;
+mov src0 t0;
+mov src1 t1;
+
+(* reconstruction *)
+
+spl hi m0 src0 52;
+spl s0 e0 hi 11;
+spl hi m1 src1 52;
+spl s1 e1 hi 11;
+
+(* construct the right mantissas *)
+
+cast uint64 m0 m0;
+cast uint64 m1 m1;
+
+subs discard t 0@uint11 e0;
+or t@uint11 t e0;
+shrs t discard t 10;
+cast uint64 t t;
+shls discard t t 52;
+or m0@uint64 m0 t;
+
+subs discard t 0@uint11 e1;
+or t@uint11 t e1;
+shrs t discard t 10;
+cast uint64 t t;
+shls discard t t 52;
+or m1@uint64 m1 t;
+
+(* scale the mantissa by 3 bits for rounding purpose *)
+
+mul xm m0 8@uint64;
+mul ym m1 8@uint64;
+
+(* shifting ym *)
+
+subs discard de e0 e1;
+
+(* if the shift count is greater than 59 we zeroize ym *)
+
+subb borrow discard 59@uint11 de;
+cmov ym0 borrow 0@uint64 ym;
+
+assert true && or[~(de > 59@11), ym0 = 0@64];
+
+(* shift ym *)
+cast uint64 de64 de;
+subs discard cde64 64@uint64 de64;
+shl rbit ym0 cde64;
+shr ym1 ym0 de64;
+
+(* compute the sticky bit based on the bits shift out *)
+
+not t@uint64 rbit;
+adds carry discard t 1@uint64;
+cmov sticky carry 0@uint64 1@uint64;
+or ym2@uint64 ym1 sticky;
+
+(* negate ym if the signs are different *)
+
+xor ts@uint1 s0 s1;
+not t@uint64 ym2;
+adds discard t t 1@uint64;
+adds carry discard ts 1@uint1;
+cmov ym3 carry t ym2;
+
+(* add the mantissas *)
+
+adds discard trm xm ym3;
+
+(* shift to the range [2**63, 2**64) *)
+
+cast uint32 txe e0;
+
+mov tm trm;
+mov te 0@uint32;
+
+shls hi lo tm 32;
+cast uint64 hi hi;
+not hi@uint64 hi;
+adds carry discard hi 1@uint64;
+cmov tm carry lo tm;
+cmov t carry 32@uint32 0@uint32;
+adds discard te te t;
+
+shls hi lo tm 16;
+cast uint64 hi hi;
+not hi@uint64 hi;
+adds carry discard hi 1@uint64;
+cmov tm carry lo tm;
+cmov t carry 16@uint32 0@uint32;
+adds discard te te t;
+
+shls hi lo tm 8;
+cast uint64 hi hi;
+not hi@uint64 hi;
+adds carry discard hi 1@uint64;
+cmov tm carry lo tm;
+cmov t carry 8@uint32 0@uint32;
+adds discard te te t;
+
+shls hi lo tm 4;
+cast uint64 hi hi;
+not hi@uint64 hi;
+adds carry discard hi 1@uint64;
+cmov tm carry lo tm;
+cmov t carry 4@uint32 0@uint32;
+adds discard te te t;
+
+shls hi lo tm 2;
+cast uint64 hi hi;
+not hi@uint64 hi;
+adds carry discard hi 1@uint64;
+cmov tm carry lo tm;
+cmov t carry 2@uint32 0@uint32;
+adds discard te te t;
+
+shls hi lo tm 1;
+cast uint64 hi hi;
+not hi@uint64 hi;
+adds carry discard hi 1@uint64;
+cmov tm carry lo tm;
+cmov t carry 1@uint32 0@uint32;
+adds discard te te t;
+
+shls hi lo tm 1;
+cast uint64 hi hi;
+not hi@uint64 hi;
+adds carry discard hi 1@uint64;
+cmov tm carry lo tm;
+cmov t carry 1@uint32 0@uint32;
+adds discard te te t;
+
+mov trm0 tm;
+subs discard txe txe te;
+
+(* add the exponent by 7 in case we are going to shift the mantissa *)
+
+adds discard txe1 txe 7@uint32;
+
+(* zeroize the exponent if the resulting mantissa is 0 *)
+
+adds carry discard trm0 (2**63)@uint64;
+cmov txe2 carry txe1 0@uint32;
+
+(* shift right by 11 bits *)
+
+shrs trm1 low_m trm0 11;
+
+cast uint32 low_m low_m;
+split thi tlo low_m 9;
+
+not t@uint32 tlo;
+adds carry discard t 1@uint32;
+cmov sticky carry 0@uint32 1@uint32;
+
+or thi@uint32 thi sticky;
+
+(* rounding *)
+
+spl hi b0 thi 1;
+spl hi b1 hi 1;
+spl hi b2 trm1 1;
+
+or t@uint1 b2 b0;
+and roundbit@uint1 t b1;
+
+cast uint64 roundbit roundbit;
+adds discard trm2 trm1 roundbit;
+
+join b0b1 b1 b0;
+join last3bits b2 b0b1;
+
+assert true && or[~(trm2 = 0@64), txe2 = 0@32];
+
+(* compute the exponent *)
+
+spl hi trm3 trm2 52;
+cast uint32 hi hi;
+adds discard txe3 txe2 hi;
+
+assert true && and[0@32 <= hi, hi <= 2@32];
+assert true && or[~(and[trm3 = 0@52, hi = 0@32]), and[txe3 = 0@32]];
+
+(* zeroization *)
+subs discard nzeroe 0@uint32 txe3;
+shrs nzeroe discard nzeroe 31;
+cast uint1 nzeroe nzeroe;
+cmov txe4 nzeroe txe3 0@uint32;
+cmov trm4 nzeroe trm3 0@uint52;
+
+assert true && and[0@32 <= txe4, txe4 < (2**31)@32];
+assert true && or[~(txe4 = 0@32), trm4 = 0@52];
+
+(* saturation *)
+subs discard sate 2046@uint32 txe4;
+shrs sate discard sate 31;
+cast uint1 sate sate;
+cmov txe5 sate 2046@uint32 txe4;
+cmov trm5 sate 0xfffffffffffff@uint52 trm4;
+
+spl hi txe6 txe5 11;
+
+(* assemble the exponent and mantissa *)
+
+mov mr trm5;
+mov er txe6;
+
+join tr0 txe6 trm5;
+cast uint64 tr0 tr0;
+
+(* assemble the sign, exponent, and mantissa *)
+
+spl hi tr1 tr0 63;
+join tr1 s0 tr1;
+
+assert true && or[and[txe6 = 0@11, trm5 = 0@52], and[0@11 < txe6, txe6 < 2047@11]];
