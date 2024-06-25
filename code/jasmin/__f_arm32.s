@@ -5,7 +5,9 @@
 ___fexpm_p63_export:
 __fexpm_p63_export:
 	push	{lr}
-	SUB 	r12, sp, #28
+	MOV 	r12, #28
+	MOVT	r12, #0
+	SUB 	r12, sp, r12
 	BIC 	r12, r12, #3
 	STR 	sp, [r12, #24]
 	MOV 	sp, r12
@@ -38,7 +40,9 @@ L__fexpm_p63_export$1:
 ___polyeval_horn_export:
 __polyeval_horn_export:
 	push	{lr}
-	SUB 	r12, sp, #20
+	MOV 	r12, #20
+	MOVT	r12, #0
+	SUB 	r12, sp, r12
 	BIC 	r12, r12, #3
 	STR 	sp, [r12, #16]
 	MOV 	sp, r12
@@ -63,7 +67,9 @@ L__polyeval_horn_export$1:
 ___fixedmul_64x64_export:
 __fixedmul_64x64_export:
 	push	{lr}
-	SUB 	r12, sp, #12
+	MOV 	r12, #12
+	MOVT	r12, #0
+	SUB 	r12, sp, r12
 	BIC 	r12, r12, #3
 	STR 	sp, [r12, #8]
 	MOV 	sp, r12
@@ -94,7 +100,9 @@ __fixedmul_64x64_export:
 ___ffromint64_32_export:
 __ffromint64_32_export:
 	push	{lr}
-	SUB 	r12, sp, #24
+	MOV 	r12, #24
+	MOVT	r12, #0
+	SUB 	r12, sp, r12
 	BIC 	r12, r12, #3
 	STR 	sp, [r12, #20]
 	MOV 	sp, r12
@@ -122,7 +130,9 @@ L__ffromint64_32_export$1:
 ___ffloor_32_export:
 __ffloor_32_export:
 	push	{lr}
-	SUB 	r12, sp, #16
+	MOV 	r12, #16
+	MOVT	r12, #0
+	SUB 	r12, sp, r12
 	BIC 	r12, r12, #3
 	STR 	sp, [r12, #12]
 	MOV 	sp, r12
@@ -146,7 +156,9 @@ L__ffloor_32_export$1:
 ___ftrunc_32_export:
 __ftrunc_32_export:
 	push	{lr}
-	SUB 	r12, sp, #16
+	MOV 	r12, #16
+	MOVT	r12, #0
+	SUB 	r12, sp, r12
 	BIC 	r12, r12, #3
 	STR 	sp, [r12, #12]
 	MOV 	sp, r12
@@ -169,7 +181,9 @@ L__ftrunc_32_export$1:
 ___fhalf_32_export:
 __fhalf_32_export:
 	push	{lr}
-	SUB 	r12, sp, #8
+	MOV 	r12, #8
+	MOVT	r12, #0
+	SUB 	r12, sp, r12
 	BIC 	r12, r12, #3
 	STR 	sp, [r12, #4]
 	MOV 	sp, r12
@@ -188,7 +202,9 @@ L__fhalf_32_export$1:
 ___fsqr_32_export:
 __fsqr_32_export:
 	push	{lr}
-	SUB 	r12, sp, #28
+	MOV 	r12, #28
+	MOVT	r12, #0
+	SUB 	r12, sp, r12
 	BIC 	r12, r12, #3
 	STR 	sp, [r12, #24]
 	MOV 	sp, r12
@@ -218,7 +234,9 @@ L__fsqr_32_export$1:
 ___fmul_32_export:
 __fmul_32_export:
 	push	{lr}
-	SUB 	r12, sp, #28
+	MOV 	r12, #28
+	MOVT	r12, #0
+	SUB 	r12, sp, r12
 	BIC 	r12, r12, #3
 	STR 	sp, [r12, #24]
 	MOV 	sp, r12
@@ -250,7 +268,9 @@ L__fmul_32_export$1:
 ___fsub_32_export:
 __fsub_32_export:
 	push	{lr}
-	SUB 	r12, sp, #32
+	MOV 	r12, #32
+	MOVT	r12, #0
+	SUB 	r12, sp, r12
 	BIC 	r12, r12, #3
 	STR 	sp, [r12, #28]
 	MOV 	sp, r12
@@ -284,7 +304,9 @@ L__fsub_32_export$1:
 ___fadd_32_export:
 __fadd_32_export:
 	push	{lr}
-	SUB 	r12, sp, #32
+	MOV 	r12, #32
+	MOVT	r12, #0
+	SUB 	r12, sp, r12
 	BIC 	r12, r12, #3
 	STR 	sp, [r12, #28]
 	MOV 	sp, r12

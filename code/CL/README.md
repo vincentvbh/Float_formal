@@ -1,18 +1,12 @@
 
+# CryptoLine verification
 
+## Requirements
+- `CryptoLine`
+    - Installation: follow https://github.com/fmlab-iis/cryptoline.
 
-# CryptoLine Verification
+## Verification results
 
-```
-Number of intervals:
-1023
-Number of intervals for addition/subtractions:
-767
-Numbef of intervals for multiplications:
-511
-```
-
-# Verification Results
 
 ## Floating-Point Addtions
 

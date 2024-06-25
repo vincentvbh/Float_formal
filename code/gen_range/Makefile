@@ -1,5 +1,6 @@
 
-CC = g++-11
+# CC = g++-11
+CC = g++
 
 CFLAGS += -mcpu=native -mtune=native -march=native -O3 -Wno-pointer-arith
 
