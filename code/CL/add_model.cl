@@ -1,7 +1,7 @@
 
 (*
- cv -v -jobs 24 -isafety -no_carry_constraint -slicing add_core.cl
 
+cv -v -jobs 24 -isafety -no_carry_constraint -slicing add_model.cl
 Parsing CryptoLine file:        [OK]        0.001819 seconds
 Checking well-formedness:       [OK]        0.000415 seconds
 

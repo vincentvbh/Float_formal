@@ -1,19 +1,24 @@
 
 # C reference rmplementations of emulated floating-Point arithmetic in Falcon
 
-## Functions
-- `fpr_mul`
+This folder contains programs testing the incorrect zeroization and extracting the witnesses from the C reference implementation of the emulated floating-point multiplication.
 
-## Requirements
+# Functions
+- `fpr_mul`, the emulated floating-point multiplication from Falcon.
+
+# Requirements
 - A `C` compiler.
 
-## Test environment
+# Test environment
 - gcc (Homebrew GCC 13.2.0) 13.2.0, Apple M1 Pro
 
-## Experienment reproduction
+# Experienment reproduction
 Type `make` to produce the binary file `test` and run `./test`.
 
-## Sample outputs
+# Sample outputs
+The program `test` outpus a series of input pairs whose products are incorrectly zeroized.
+For each line, the output format is as follows:
+`constant used in the FFT as the first operand`, `the second operand`, `result from the native FPU`, `result from fpr_mul`
 ```
 3fe6a09e667f3bcd,   16a09e667f3bcc:   10000000000000,                0
 3fe6a09e667f3bcd,   16a09e667f3bcc:   10000000000000,                0

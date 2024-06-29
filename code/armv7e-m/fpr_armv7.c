@@ -7,7 +7,7 @@
 
 __attribute__((naked))
 fpr
-fpr_add(fpr x __attribute__((unused)), fpr y __attribute__((unused)))
+fpr_add_new(fpr x __attribute__((unused)), fpr y __attribute__((unused)))
 {
     __asm__ (
     "push   { r4, r5, r6, r7, r8, r10, r11, lr }\n\t"
@@ -200,7 +200,7 @@ fpr_add(fpr x __attribute__((unused)), fpr y __attribute__((unused)))
 
 __attribute__((naked))
 fpr
-fpr_add_old(fpr x __attribute__((unused)), fpr y __attribute__((unused)))
+fpr_add(fpr x __attribute__((unused)), fpr y __attribute__((unused)))
 {
     __asm__ (
     "push   { r4, r5, r6, r7, r8, r10, r11, lr }\n\t"
@@ -383,7 +383,7 @@ fpr_add_old(fpr x __attribute__((unused)), fpr y __attribute__((unused)))
 
 __attribute__((naked))
 fpr
-fpr_mul(fpr x __attribute__((unused)), fpr y __attribute__((unused)))
+fpr_mul_new(fpr x __attribute__((unused)), fpr y __attribute__((unused)))
 {
     __asm__ (
     "push   { r4, r5, r6, r7, r8, r9, r10, r11, lr }\n\t"
@@ -494,7 +494,7 @@ fpr_mul(fpr x __attribute__((unused)), fpr y __attribute__((unused)))
 
 __attribute__((naked))
 fpr
-fpr_mul_old(fpr x __attribute__((unused)), fpr y __attribute__((unused)))
+fpr_mul(fpr x __attribute__((unused)), fpr y __attribute__((unused)))
 {
     __asm__ (
     "push   { r4, r5, r6, r7, r8, r10, r11, lr }\n\t"
@@ -699,27 +699,6 @@ fpr_scaled(int64_t i, int sc)
      * where e is too low.
      */
     return FPR(s, e, m);
-}
-
-uint64_t mul_fixed64(uint64_t a, uint64_t b){
-
-    uint32_t a0, a1;
-    uint32_t b0, b1;
-    uint64_t t0, t1, c;
-
-    a0 = (uint32_t)a;
-    a1 = (uint32_t)(a >> 32);
-    b0 = (uint32_t)b;
-    b1 = (uint32_t)(b >> 32);
-
-    t0 = (uint64_t)a0 * (uint64_t)b1 + (((uint64_t)a0 * (uint64_t)b0) >> 32);
-    t1 = (uint64_t)a1 * (uint64_t)b0;
-    c = (t0 >> 32) + (t1 >> 32);
-    c += (((uint64_t)(uint32_t)t0 + (uint64_t)(uint32_t)t1) >> 32);
-    c += (uint64_t)a1 * (uint64_t)b1;
-
-    return c;
-
 }
 
 uint64_t

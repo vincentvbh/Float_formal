@@ -484,8 +484,6 @@ fpr_lt(fpr x, fpr y)
  * bits or so.
  */
 uint64_t fpr_expm_p63(fpr x, fpr ccs);
-// custom aux function
-uint64_t mul_fixed64(uint64_t a, uint64_t b);
 
 extern const fpr fpr_gm_tab[];
 

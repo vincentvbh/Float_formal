@@ -45,7 +45,7 @@ int main(void){
         memmove(&b_fpr, &b, sizeof(double));
 
         c = a + b;
-        c_fpr = fpr_add(a_fpr, b_fpr);
+        c_fpr = fpr_add_new(a_fpr, b_fpr);
         if(memcmp(&c, &c_fpr, sizeof(double)) != 0){
             sprintf(out, "fpr_add:\n%16llx\n%16llx\n\n", *(uint64_t*)&c, *(uint64_t*)&c_fpr);
             hal_send_str(out);
@@ -66,9 +66,9 @@ int main(void){
         memmove(&b_fpr, &b, sizeof(double));
 
         c = a * b;
-        c_fpr = fpr_mul(a_fpr, b_fpr);
+        c_fpr = fpr_mul_new(a_fpr, b_fpr);
         if(memcmp(&c, &c_fpr, sizeof(double)) != 0){
-            sprintf(out, "fpr_mul:\n%16llx\n%16llx\n\n", *(uint64_t*)&c, *(uint64_t*)&c_fpr);
+            sprintf(out, "fpr_mul_new:\n%16llx\n%16llx\n\n", *(uint64_t*)&c, *(uint64_t*)&c_fpr);
             hal_send_str(out);
         }
 
@@ -90,9 +90,9 @@ int main(void){
     memmove(&b_fpr, &b_int, sizeof(double));
 
     c = a * b;
-    c_fpr = fpr_mul(a_fpr, b_fpr);
+    c_fpr = fpr_mul_new(a_fpr, b_fpr);
     if(memcmp(&c, &c_fpr, sizeof(double)) != 0){
-        sprintf(out, "fpr_mul:\n%16llx\n%16llx\n", *(uint64_t*)&c, *(uint64_t*)&c_fpr);
+        sprintf(out, "fpr_mul_new:\n%16llx\n%16llx\n", *(uint64_t*)&c, *(uint64_t*)&c_fpr);
         hal_send_str(out);
     }
 
@@ -108,9 +108,9 @@ int main(void){
     memmove(&b_fpr, &b_int, sizeof(double));
 
     c = a * b;
-    c_fpr = fpr_mul(a_fpr, b_fpr);
+    c_fpr = fpr_mul_new(a_fpr, b_fpr);
     if(memcmp(&c, &c_fpr, sizeof(double)) != 0){
-        sprintf(out, "fpr_mul:\n%16llx\n%16llx\n", *(uint64_t*)&c, *(uint64_t*)&c_fpr);
+        sprintf(out, "fpr_mul_new:\n%16llx\n%16llx\n", *(uint64_t*)&c, *(uint64_t*)&c_fpr);
         hal_send_str(out);
     }
 
@@ -118,6 +118,8 @@ int main(void){
     hal_send_str(out);
 
 
-
 }
+
+
+
 
