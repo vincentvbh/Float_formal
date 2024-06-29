@@ -14,7 +14,6 @@ This folder contains programs generating the range conditions that will be later
 Type `make` to produce the binary `interval_test` and run `./interval_test`.
 
 # Sample outputs
-
 ```
 or[ 546@11 < e0, and[546@11 = e0, 0@52 <= m0 ] ]
 or[ 1049@11 > e0, and[1049@11 = e0, 605182448294568@52 >= m0 ] ]

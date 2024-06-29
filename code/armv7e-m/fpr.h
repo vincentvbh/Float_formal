@@ -398,6 +398,7 @@ fpr_trunc(fpr x)
 }
 
 fpr fpr_add(fpr x, fpr y);
+fpr fpr_add_new(fpr x, fpr y);
 
 static inline fpr
 fpr_sub(fpr x, fpr y)
@@ -441,6 +442,7 @@ fpr_double(fpr x)
 }
 
 fpr fpr_mul(fpr x, fpr y);
+fpr fpr_mul_new(fpr x, fpr y);
 
 static inline fpr
 fpr_sqr(fpr x)

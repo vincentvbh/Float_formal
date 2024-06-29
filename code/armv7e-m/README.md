@@ -26,6 +26,28 @@ Type `sh makelib.sh` to compile the necessary binary for the board.
 Type `make all` to produce the binary file `test.bin`.
 
 # Configuration for reading from the board `stm32f407discovery`
+Please check the name of the device by searching the names with the prefix
+```
+/dev/tty.usb
+```
+and modify the device name in `common/config.py` accordingly.
+To read the output from the board, type
+```
+python3 common/read_serial.py
+```
+
+# Flash the binary to the board
+Type
+```
+st-flash --reset write test.bin 0x8000000
+```
 
 # Sample outputs
+```
+...
+================================
+floating-point add test done!
+floating-point mul test done!
+floating-point mul edge-case test done!
+```
 

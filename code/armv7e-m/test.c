@@ -30,11 +30,11 @@ int main(void){
 
     hal_setup(CLOCK_FAST);
 
-    a = rand_double();
-    b = rand_double();
+    for(size_t i = 0; i < 32; i++){
+        hal_send_str("================================");
+    }
 
-    memmove(&a_fpr, &a, sizeof(double));
-    memmove(&b_fpr, &b, sizeof(double));
+// ================================
 
     for(size_t i = 0; i < ITERATIONS; i++){
 
@@ -57,6 +57,8 @@ int main(void){
     sprintf(out, "floating-point add test done!");
     hal_send_str(out);
 
+// ================================
+
     for(size_t i = 0; i < ITERATIONS; i++){
 
         a = rand_double();
@@ -77,6 +79,8 @@ int main(void){
     sprintf(out, "floating-point mul test done!");
     hal_send_str(out);
 
+// ================================
+
     // 200 6 a09e 667f 3bcd
     a_int = 6369051672525773 - ( (1ULL) << 52);
     a_int |= 0x2000000000000000;
@@ -95,6 +99,8 @@ int main(void){
         sprintf(out, "fpr_mul_new:\n%16llx\n%16llx\n", *(uint64_t*)&c, *(uint64_t*)&c_fpr);
         hal_send_str(out);
     }
+
+// ================================
 
     // ffe 6 a09e 667f 3bcd
     a_int = 6369051672525773 - ( (1ULL) << 52);

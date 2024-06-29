@@ -36,5 +36,47 @@ Type `sh makelib.sh` to compile the necessary binary for the board.
 Type `make all` to produce the binary file `test_m4.bin`.
 
 # Configuration for reading from the board `stm32f407discovery`
+# Configuration for reading from the board `stm32f407discovery`
+Please check the name of the device by searching the names with the prefix
+```
+/dev/tty.usb
+```
+and modify the device name in `common/config.py` accordingly.
+To read the output from the board, type
+```
+python3 common/read_serial.py
+```
+
+# Flash the binary to the board
+Type
+```
+st-flash --reset write test_m4.bin 0x8000000
+```
 
 # Sample outputs
+```
+...
+================================
+__mul_64x64 test start!
+__mul_64x64 test finished!
+floating-point start!
+fpr_expm_p63 test start!
+fpr_expm_p63 test end!
+floating-point add test done!
+floating-point sub test done!
+floating-point mul test done!
+floating-point sqr test done!
+floating-point half test done!
+floating-point trunc test done!
+floating-point floor test done!
+int64_t to floating-point test done!
+floating-point mul edge-case test done!
+floating-point trunc edge-case test done!
+floating-point floor edge-case test done!
+```
+
+
+
+
+
+

@@ -23,7 +23,7 @@ This folder contains CryptoLine programs for formal verification.
 
 # CryptoLine models
 We implement our own CryptoLine models for the floating-point addition and multiplication.
-Our models compute the results with zeroization and saturation and the output is always a zero or a normal floating-point number. Extensions to the full support of IEEE 754 is possible, but will be much more complicated and irrelevant to Falcon if one can show that all the intermediate floating-point numbers are zeros or normal floating-point values with the native FPU.
+Our models compute the results with zeroization and saturation and the outputs is always a zero or a normal floating-point number. Extensions to the full support of IEEE 754 is possible, but will be much more complicated and irrelevant to Falcon if one can show that all the intermediate floating-point numbers are zeros or normal floating-point values with the native FPU.
 
 # Verification of our implementations
 
@@ -33,7 +33,7 @@ Type
 cv -v -jobs 24 -isafety -no_carry_constraint -slicing fpr_add_new.cl
 ```
 
-### Sample output
+### Sample outputs
 ```
 ...
 Summary
@@ -47,7 +47,7 @@ Type
 cv -v -jobs 24 -isafety -no_carry_constraint -slicing fpr_mul_new.cl
 ```
 
-### Sample output
+### Sample outputs
 ```
 ...
 Summary
@@ -63,7 +63,7 @@ Type
 cv -v -jobs 24 -isafety -no_carry_constraint -slicing __fadd.cl
 ```
 
-### Sample output
+### Sample outputs
 ```
 ...
 Summary
@@ -77,7 +77,7 @@ Type
 cv -v -jobs 24 -isafety -no_carry_constraint -slicing __fmul.cl
 ```
 
-### Sample output
+### Sample outputs
 ```
 ...
 Summary
@@ -93,7 +93,7 @@ Type
 cv -v -jobs 24 -isafety -no_carry_constraint -slicing add_range.cl
 ```
 
-### Sample output
+### Sample outputs
 ```
 ...
 Summary
@@ -107,7 +107,7 @@ Type
 cv -v -jobs 24 -isafety -no_carry_constraint -slicing mul_range.cl
 ```
 
-### Sample output
+### Sample outputs
 ```
 ...
 Summary
