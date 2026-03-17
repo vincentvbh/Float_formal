@@ -20,13 +20,13 @@ void gen_CT_table(
 
     memcpy(twiddle, scale, ring.sizeZ);
     for(size_t i = 0; i < (_profile.ntt_n >> 1); i++){
-        memcpy(des, twiddle, ring.sizeZ);
-        des += ring.sizeZ;
+        memcpy((char*)des, twiddle, ring.sizeZ);
+        des = (char*)des + ring.sizeZ;
         ring.mulZ(twiddle, twiddle, zeta);
     }
 
-    des -= ring.sizeZ * (_profile.ntt_n >> 1);
-    bitreverse(des, _profile.ntt_n >> 1, ring.sizeZ);
+    des = (char*)des - ring.sizeZ * (_profile.ntt_n >> 1);
+    bitreverse((char*)des, _profile.ntt_n >> 1, ring.sizeZ);
 
 }
 
@@ -53,9 +53,9 @@ void gen_DWT_table(
 
     for(size_t i = 0; i < _profile.log_ntt_n; i++){
         for(size_t j = 0; j < (1u << i); j++){
-            ring.mulZ(des + j * ring.sizeZ, buff + j * ring.sizeZ, zeta_buff + i * ring.sizeZ);
+            ring.mulZ((char*)des + j * ring.sizeZ, buff + j * ring.sizeZ, zeta_buff + i * ring.sizeZ);
         }
-        des += (1u << i) * ring.sizeZ;
+        des = (char*)des + (1u << i) * ring.sizeZ;
     }
 
 
@@ -78,7 +78,7 @@ void gen_inv_CT_table(
         memcpy(twiddle, scale, ring.sizeZ);
         for(size_t i = 0; i < (1u << level); i++){
             memcpy(des, twiddle, ring.sizeZ);
-            des += ring.sizeZ;
+            des = (char*)des + ring.sizeZ;
             ring.mulZ(twiddle, twiddle, zeta);
         }
     }
@@ -115,14 +115,14 @@ void gen_streamlined_DWT_table(
         for(size_t j = 0; j < (1u << start_level); j++){
             if(pad){
                 memset(des, 0, ring.sizeZ);
-                des += ring.sizeZ;
+                des = (char*)des + ring.sizeZ;
             }
             for(size_t k = 0; k < (_profile.merged_layers[i]); k++){
                 for(size_t h = 0; h < (1u << k); h++){
                     memcpy(des,
-                        level_ptr[start_level + k] + (j * (1 << k) + h) * ring.sizeZ,
+                        (char*)level_ptr[start_level + k] + (j * (1 << k) + h) * ring.sizeZ,
                         ring.sizeZ);
-                    des += ring.sizeZ;
+                    des = (char*)des + ring.sizeZ;
                 }
             }
         }
@@ -165,15 +165,15 @@ void gen_streamlined_inv_CT_table(
         for(size_t j = 0; j < (1u << start_level); j++){
             if(pad){
                 memset(des, 0, ring.sizeZ);
-                des += ring.sizeZ;
+                des = (char*)des + ring.sizeZ;
             }
             for(size_t k = 0; k < (_profile.merged_layers[i]); k++){
                 for(size_t h = 0; h < (1u << k); h++){
                     memcpy(
                         des,
-                        level_ptr[start_level + k] + (j + (h << start_level)) * ring.sizeZ,
+                        (char*)level_ptr[start_level + k] + (j + (h << start_level)) * ring.sizeZ,
                         ring.sizeZ);
-                    des += ring.sizeZ;
+                    des = (char*)des + ring.sizeZ;
                 }
             }
         }
@@ -199,7 +199,7 @@ void gen_twist_table(
     memcpy(twiddle, scale, ring.sizeZ);
     for(size_t i = 0; i < _profile.ntt_n; i++){
         memcpy(des, twiddle, ring.sizeZ);
-        des += ring.sizeZ;
+        des = (char*)des + ring.sizeZ;
         ring.mulZ(twiddle, twiddle, zeta);
     }
 
@@ -222,11 +222,11 @@ void gen_mul_table(
     memcpy(twiddle, scale, ring.sizeZ);
     for(size_t i = 0; i < (_profile.ntt_n >> 1); i++){
         memcpy(des, twiddle, ring.sizeZ);
-        des += ring.sizeZ;
+        des = (char*)des + ring.sizeZ;
         ring.mulZ(twiddle, twiddle, zeta);
     }
 
-    des -= (_profile.ntt_n >> 1) * ring.sizeZ;
+    des = (char*)des - (_profile.ntt_n >> 1) * ring.sizeZ;
 
     bitreverse(des, _profile.ntt_n >> 1, ring.sizeZ);
 

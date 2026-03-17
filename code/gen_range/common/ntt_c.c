@@ -13,9 +13,9 @@ void CT_butterfly(
 
     char tmp[ring.sizeZ];
 
-    ring.mulZ(tmp, src + indx_b * ring.sizeZ, twiddle);
-    ring.subZ(src + indx_b * ring.sizeZ, src + indx_a * ring.sizeZ, tmp);
-    ring.addZ(src + indx_a * ring.sizeZ, src + indx_a * ring.sizeZ, tmp);
+    ring.mulZ(tmp, (char*)src + indx_b * ring.sizeZ, twiddle);
+    ring.subZ((char*)src + indx_b * ring.sizeZ, (char*)src + indx_a * ring.sizeZ, tmp);
+    ring.addZ((char*)src + indx_a * ring.sizeZ, (char*)src + indx_a * ring.sizeZ, tmp);
 
 }
 
@@ -30,9 +30,9 @@ void GS_butterfly(
 
     char tmp[ring.sizeZ];
 
-    ring.subZ(tmp, src + indx_a * ring.sizeZ, src + indx_b * ring.sizeZ);
-    ring.addZ(src + indx_a * ring.sizeZ, src + indx_a * ring.sizeZ, src + indx_b * ring.sizeZ);
-    ring.mulZ(src + indx_b * ring.sizeZ, tmp, twiddle);
+    ring.subZ(tmp, (char*)src + indx_a * ring.sizeZ, (char*)src + indx_b * ring.sizeZ);
+    ring.addZ((char*)src + indx_a * ring.sizeZ, (char*)src + indx_a * ring.sizeZ, (char*)src + indx_b * ring.sizeZ);
+    ring.mulZ((char*)src + indx_b * ring.sizeZ, tmp, twiddle);
 
 }
 
@@ -56,16 +56,16 @@ void m_layer_CT_butterfly(
 
         jump = step << (layers - i);
 
-        real_root_table = _root_table + ((1 << i) - 1) * ring.sizeZ;
+        real_root_table = (char*)_root_table + ((1 << i) - 1) * ring.sizeZ;
 
         real_step = step << (layers - 1 - i);
 
         for(size_t k = 0; k < real_count; k++){
             for(size_t j = 0; j < twiddle_count; j++){
                 CT_butterfly(
-                    src + (j * jump + k * step) * ring.sizeZ,
+                    (char*)src + (j * jump + k * step) * ring.sizeZ,
                     0, real_step,
-                    real_root_table + j * ring.sizeZ,
+                    (char*)real_root_table + j * ring.sizeZ,
                     ring
                     );
             }
@@ -95,16 +95,16 @@ void m_layer_CT_ibutterfly(
 
         jump = step << (i + 1);
 
-        real_root_table = _root_table + ((1 << i) - 1) * ring.sizeZ;
+        real_root_table = (char*)_root_table + ((1 << i) - 1) * ring.sizeZ;
 
         real_step = step << i;
 
         for(size_t k = 0; k < real_count; k++){
             for(size_t j = 0; j < twiddle_count; j++){
                 CT_butterfly(
-                    src + (j * step + k * jump) * ring.sizeZ,
+                    (char*)src + (j * step + k * jump) * ring.sizeZ,
                     0, real_step,
-                    real_root_table + j * ring.sizeZ,
+                    (char*)real_root_table + j * ring.sizeZ,
                     ring
                     );
             }
@@ -134,16 +134,16 @@ void m_layer_GS_ibutterfly(
 
         jump = step << (layers - i);
 
-        real_root_table = _root_table + ((1 << i) - 1) * ring.sizeZ;
+        real_root_table = (char*)_root_table + ((1 << i) - 1) * ring.sizeZ;
 
         real_step = step << (layers - 1 - i);
 
         for(size_t k = 0; k < real_count; k++){
             for(size_t j = 0; j < twiddle_count; j++){
                 GS_butterfly(
-                    src + (j * jump + k * step) * ring.sizeZ,
+                    (char*)src + (j * jump + k * step) * ring.sizeZ,
                     0, real_step,
-                    real_root_table + j * ring.sizeZ,
+                    (char*)real_root_table + j * ring.sizeZ,
                     ring
                     );
             }
@@ -187,13 +187,13 @@ void compressed_CT_NTT(
 
         offset = 0;
 
-        real_root_table = _root_table + ((1 << level) - 1) * ring.sizeZ;
+        real_root_table = (char*)_root_table + ((1 << level) - 1) * ring.sizeZ;
 
         for(size_t count = 0; count < (1 << level); count++){
 
             for(size_t i = 0; i < step; i++){
                 m_layer_CT_butterfly(
-                    src + (offset + i) * ring.sizeZ,
+                    (char*)src + (offset + i) * ring.sizeZ,
                     *level_indx, step,
                     real_root_table,
                     ring
@@ -202,7 +202,7 @@ void compressed_CT_NTT(
 
             offset += _profile.array_n >> level;
 
-            real_root_table += ((1 << (*level_indx)) - 1) * ring.sizeZ;
+            real_root_table = (char*)real_root_table + ((1 << (*level_indx)) - 1) * ring.sizeZ;
 
         }
 
@@ -236,7 +236,7 @@ void compressed_CT_iNTT(
         real_end_level += (_profile.merged_layers)[i];
     }
 
-    real_root_table = _root_table + ((1 << real_start_level) - 1) * ring.sizeZ;
+    real_root_table = (char*)_root_table + ((1 << real_start_level) - 1) * ring.sizeZ;
 
     level_indx = (_profile.merged_layers) + start_level;
 
@@ -252,7 +252,7 @@ void compressed_CT_iNTT(
 
                 for(size_t j = 0; j < (_profile.array_n >> _profile.log_ntt_n); j++){
                     m_layer_CT_ibutterfly(
-                        src + (offset + j) * ring.sizeZ,
+                        (char*)src + (offset + j) * ring.sizeZ,
                         *level_indx, step,
                         real_root_table,
                         ring
@@ -263,7 +263,7 @@ void compressed_CT_iNTT(
 
             }
 
-            real_root_table += ((1 << (*level_indx)) - 1) * ring.sizeZ;
+            real_root_table = (char*)real_root_table + ((1 << (*level_indx)) - 1) * ring.sizeZ;
 
         }
 
@@ -305,13 +305,13 @@ void compressed_GS_NTT(
 
         offset = 0;
 
-        real_root_table = _root_table + ((1 << level) - 1) * ring.sizeZ;
+        real_root_table = (char*)_root_table + ((1 << level) - 1) * ring.sizeZ;
 
         for(size_t count = 0; count < (1 << level); count++){
 
             for(size_t i = 0; i < step; i++){
                 m_layer_GS_ibutterfly(
-                    src + (offset + i) * ring.sizeZ,
+                    (char*)src + (offset + i) * ring.sizeZ,
                     *level_indx, step,
                     real_root_table,
                     ring
@@ -320,7 +320,7 @@ void compressed_GS_NTT(
 
             offset += _profile.array_n >> level;
 
-            real_root_table += ((1 << (*level_indx)) - 1) * ring.sizeZ;
+            real_root_table = (char*)real_root_table + ((1 << (*level_indx)) - 1) * ring.sizeZ;
 
         }
 

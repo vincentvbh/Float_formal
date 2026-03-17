@@ -173,9 +173,9 @@ void bitreverse(void *src, size_t len, size_t size){
 
     for(size_t i = 0, j = 0; i < len; i++){
         if(i < j){
-            memcpy(tmp, src + i * size, size);
-            memcpy(src + i * size, src + j * size, size);
-            memcpy(src + j * size, tmp, size);
+            memcpy(tmp, (char*)src + i * size, size);
+            memcpy((char*)src + i * size, (char*)src + j * size, size);
+            memcpy((char*)src + j * size, tmp, size);
         }
         for(size_t k = len >> 1; (j ^= k) < k; k >>= 1);
     }

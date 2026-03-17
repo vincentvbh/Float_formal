@@ -22,6 +22,11 @@ double rand_double(void){
     return t;
 }
 
+__attribute__((noinlign))
+double fmul(double a, double b){
+    return a * b;
+}
+
 int main(void){
 
     double a, b, c;
@@ -33,6 +38,18 @@ int main(void){
     for(size_t i = 0; i < 32; i++){
         hal_send_str("================================");
     }
+
+    for(size_t i = 0; i < ITERATIONS; i++){
+
+        a = rand_double();
+        b = rand_double();
+
+        c = fmul(a, b);
+
+    }
+
+    sprintf(out, "floating-point add test done!");
+    hal_send_str(out);
 
 // ================================
 

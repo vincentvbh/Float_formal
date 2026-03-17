@@ -5,11 +5,14 @@
 #include <memory.h>
 #include <stdio.h>
 
+// fpr = uint64_t
+
 __attribute__((naked))
 fpr
 fpr_add_new(fpr x __attribute__((unused)), fpr y __attribute__((unused)))
 {
     __asm__ (
+        // []
     "push   { r4, r5, r6, r7, r8, r10, r11, lr }\n\t"
     "\n\t"
     "@ Make sure that the first operand (x) has the larger absolute\n\t"
@@ -194,7 +197,8 @@ fpr_add_new(fpr x __attribute__((unused)), fpr y __attribute__((unused)))
     "@ conditional swap at the start, this is always correct.\n\t"
     "bfi    r1, r5, #31, #1\n\t"
     "\n\t"
-    "pop    { r4, r5, r6, r7, r8, r10, r11, pc }\n\t"
+    "pop    { r4, r5, r6, r7, r8, r10, r11 }\n\t"
+    "ldr pc, [sp], #4\n\t"
     );
 }
 

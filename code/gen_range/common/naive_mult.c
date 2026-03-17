@@ -21,16 +21,16 @@ void naive_mulR(
 
     for(size_t i = 0; i < len; i++){
         for(size_t j = 0; j < len; j++){
-            ring.mulZ(tmp, src1 + i * ring.sizeZ, src2 + j * ring.sizeZ);
+            ring.mulZ(tmp, (char*)src1 + i * ring.sizeZ, (char*)src2 + j * ring.sizeZ);
             ring.addZ(buff + (i + j) * ring.sizeZ, buff + (i + j) * ring.sizeZ, tmp);
         }
     }
 
     for(size_t i = ((len - 1) << 1); i >= len; i--){
         ring.mulZ(tmp, buff + i * ring.sizeZ, twiddle);
-        ring.addZ(des + (i - len) * ring.sizeZ, buff + (i - len) * ring.sizeZ, tmp);
+        ring.addZ((char*)des + (i - len) * ring.sizeZ, buff + (i - len) * ring.sizeZ, tmp);
     }
-    memcpy(des + (len - 1) * ring.sizeZ, buff + (len - 1) * ring.sizeZ, ring.sizeZ);
+    memcpy((char*)des + (len - 1) * ring.sizeZ, buff + (len - 1) * ring.sizeZ, ring.sizeZ);
 
 }
 
@@ -51,11 +51,11 @@ void naive_mul_long(
 
     for(size_t i = 0; i < len; i++){
         for(size_t j = 0; j < len; j++){
-            ring.mulZ(tmp, src1 + i * ring.sizeZ, src2 + j * ring.sizeZ);
+            ring.mulZ(tmp, (char*)src1 + i * ring.sizeZ, (char*)src2 + j * ring.sizeZ);
             ring.addZ(buff + (i + j) * ring.sizeZ, buff + (i + j) * ring.sizeZ, tmp);
         }
     }
-    memcpy(des, buff, (2 * len - 1) * ring.sizeZ);
+    memcpy((char*)des, buff, (2 * len - 1) * ring.sizeZ);
 
 }
 
@@ -72,7 +72,7 @@ void point_mul(
 
     for(size_t i = 0; i < len; i++){
         for(size_t j = 0; j < jump; j++){
-            ring.mulZ(des + (i * jump + j) * ring.sizeZ, src1 + (i * jump + j) * ring.sizeZ, src2 + i * ring.sizeZ);
+            ring.mulZ((char*)des + (i * jump + j) * ring.sizeZ, (char*)src1 + (i * jump + j) * ring.sizeZ, (char*)src2 + i * ring.sizeZ);
         }
     }
 

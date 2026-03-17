@@ -85,6 +85,11 @@ cmov t1 swap_final src0 src1;
 mov src0 t0;
 mov src1 t1;
 
+// a = (a0 + a1 * 2^32)
+// b = (b0 + b1 * 2^32)
+
+// c = (a0 + a1 * 2^32) * (b0 + b1 * 2^32)
+
 (* reconstruction *)
 
 spl hi m0 src0 52;
@@ -296,6 +301,12 @@ spl hi tr1 tr0 63;
 join tr1 s0 tr1;
 
 assert true && or[and[txe6 = 0@11, trm5 = 0@52], and[0@11 < txe6, txe6 < 2047@11]];
+
+(* computer algebra system && SMT solver *)
+
+(* a = b (mod q) *)
+
+(*  *)
 
 (* assembly below *)
 
