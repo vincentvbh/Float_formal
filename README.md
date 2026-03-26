@@ -1,9 +1,12 @@
 
 # Formal verification of emulated floating-point arithmetic in Falcon
 
-This repository accompanies with the paper **Formal Verification of Emulated Floating-Point Arithmetic in Falcon**
-to appear at [IWSEC 2024](https://www.iwsec.org/2024/).
+This repository accompanies with the paper **Formal Verification of Emulated Floating-Point Arithmetic in Falcon** at [IWSEC 2024](https://www.iwsec.org/2024/).
 You can also find the copy of the paper at [ePrint 2024/321](https://eprint.iacr.org/2024/321).
+
+## Addendum
+
+In the previous versions of the paper, there was a mistake on the power-of-two exponents in the range of the intermediate floating-point numbers: the exponents should be further subtracted by 53. This was a human interpretation error, where the raw program logs were misread while writing the paper. There is no impact on other claims made in this paper.
 
 # Structure of this repository
 - `code`
